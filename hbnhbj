@@ -1,2 +1,44 @@
-DELETE FROM TA_CHARTER_BKNG_INTERFACE_TEMP;
-COMMIT;
+BEGIN
+  FOR rec IN (
+    SELECT ROWID as rid, 
+           FILE_CODE, RESERVATION_NO, TOURIST, HOTEL, TOTAL_NO_OF_PAX
+    FROM TA_CHARTER_BKNG_INTERFACE_TEMP
+  ) LOOP
+    DECLARE
+      v_error VARCHAR2(4000) := '';
+    BEGIN
+      -- Charter booking validations
+      IF rec.FILE_CODE IS NULL OR TRIM(rec.FILE_CODE) IS NULL THEN
+        v_error := v_error || 'File Code is required. ';
+      END IF;
+      
+      IF rec.RESERVATION_NO IS NULL THEN
+        v_error := v_error || 'Reservation number is required. ';
+      END IF;
+      
+      IF rec.TOURIST IS NULL OR TRIM(rec.TOURIST) IS NULL THEN
+        v_error := v_error || 'Tourist name is required. ';
+      END IF;
+      
+      IF rec.HOTEL IS NULL OR TRIM(rec.HOTEL) IS NULL THEN
+        v_error := v_error || 'Hotel is required. ';
+      END IF;
+      
+      IF rec.TOTAL_NO_OF_PAX IS NULL OR rec.TOTAL_NO_OF_PAX <= 0 THEN
+        v_error := v_error || 'Total PAX must be greater than 0. ';
+      END IF;
+
+      -- Update validation
+      IF v_error IS NOT NULL THEN
+        UPDATE TA_CHARTER_BKNG_INTERFACE_TEMP
+        SET ERROR_LOG = v_error, VALIDATION_STATUS = 'N'
+        WHERE ROWID = rec.rid;
+      ELSE
+        UPDATE TA_CHARTER_BKNG_INTERFACE_TEMP
+        SET ERROR_LOG = NULL, VALIDATION_STATUS = 'Y'
+        WHERE ROWID = rec.rid;
+      END IF;
+    END;
+  END LOOP;
+  COMMIT;
+END;
